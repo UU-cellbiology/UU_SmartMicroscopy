@@ -1,0 +1,96 @@
+---
+general_inputs:
+    #save settings (file name, path, calibration path for magnification calibration)
+    file_name                       : 'test_run_01'
+    folder_name                     : 'C:\Users\Rates001\Downloads'
+
+    #model for feedback experiment
+    # choose between 'AutomaticPath' for migration experiment | 'PID_LEXY_SAM' for concentration experiments
+    model                           : 'AutomaticPath'
+
+    #Microscope in use
+    # choose from the following options | 'micromanager' | 'demo'
+    microscope                      : 'demo'
+
+    #number of measurement points and their time interval in seconds
+    n_time_points                   : 240
+    time_interval_s                 : 15
+
+    #acquisition settings: list of tuples with name of channel and exposure time, fluorescence setting, and attenuation for optogenetic signal
+    coolLED                         : 15
+    attenuation                     : 1.4
+    channels                        : 
+    - ['4-mCherry',100]
+
+    #size of the cell in pixel [width, height] for segmentation
+    cell_size                       : [200,200]
+
+functionalities_PID_LEXY_SAM: 
+    #size of the nucleus in pixel [width, height] for box ONLY for LEXY
+    nucleus_size                    : [300,300]
+
+    #setpoint_array is for concentration experiments. It is a list of tuples, each tuple has the format (time,setpoint), to assign a new controller setpoint at a certain time (in seconds).
+    setpoint_array                  : 
+    - [0,0.5]
+    - [900,0.3]
+    - [1800,0.4]
+    - [2700,0.2]
+
+    # LEXY controlled parameter (One of: ["nucleus_intensity", "cytosol_intensity", "ratio"], corresponding to nucleus, cytosol and nucleus-cytosol ratio control )
+    LEXY_control_parameter          : 'normalized_cytosol_intensity'
+
+    # Minimum and maximum intensity of controlled variable (nucleus, cytosol, ration), used for normalization
+    LEXY_normalization_parameters   : 
+    - 43
+    - 110
+
+    # Use gain scheduling or anti-windup in LEXY PID controller
+    use_gainscheduling              : False
+    use_antiwindup                  : False
+
+    #PID_coef is a list with 3 floats, representing the P,I, and D coefficients for the LEXY controller
+    PID_coef                        : [9.0,0.005,0.3]
+
+    #set illuminate_nucleus as True for LEXY to only illuminate nucleus, set it as False to illuminate the full cell
+    illuminate_nucleus              : False
+
+functionalities_AutomaticPath: 
+    #power_array is for migration experiments. It is a list of lists, each inner list has the format (loop,step,power), to assign a new led power at a certain loop and step on that loop.
+    power_array                     : 
+    - [0,0,1]
+    - [1,0,2]
+
+    #type of path to draw. Choose between circle | square | triangle | vline | hline
+    path_type                       : 
+    - 'circle'
+
+    #path_pos has the structure [(x,y), r, n] with x,y center of path, r size of path (for circle and square), and n number of points
+    path_pos                        : 
+    - [[800, 800], 350, 40]
+
+advanced_inputs:
+    #max_height and offset: (int) set image display size
+    max_height                      : 700
+    offset                          : 0
+
+    #waiting time if you have a multichannel measurement - in seconds
+    waiting_multichannel            : 1
+
+    #extra_zoom: (int, 0 or 1) 1.5x manual magnification. 
+    extra_zoom                      : 0
+
+    #cali_coordinates: (list of tuples with pair of ints) coordinates of the 3 spots used for calibration. If you want to use coordinate from file, set this as None.
+    cali_coordinates                : 
+    - [250,300]
+    - [350,200]
+    - [360,300]
+
+    #calibration file name
+    cal_file_path                   : 'cal_file_60.txt'
+
+    #demo path. Leave emty if you want to use demo images from repository
+    demo_path                       : ''
+
+    #segmentation algorithm. Choose between SAM | Threshold
+    segmentation                       : 'Threshold'
+...
