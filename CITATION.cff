@@ -1,0 +1,46 @@
+cff-version: 1.2.0
+title: UU Modular Platform for Smart Microscopy
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Alfredo
+    family-names: Rates
+    email: a.ratessoriano@uu.nl
+    affiliation: Utrecht University
+    orcid: 'https://orcid.org/0000-0001-6154-873X'
+  - given-names: Jakob
+    family-names: Schröder
+    affiliation: Utrecht University
+  - given-names: Josiah
+    name-suffix: B
+    family-names: Passmore
+    affiliation: Utrecht University
+  - given-names: Menno
+    name-suffix: T P
+    family-names: van Laarhoven
+    affiliation: Delft University of Technology
+  - given-names: Vincent
+    name-suffix: J W
+    family-names: Hellebrekers
+    affiliation: Utrecht University
+  - given-names: Ihor
+    family-names: Smal
+    affiliation: Utrecht University
+  - given-names: Lukas
+    name-suffix: C
+    family-names: Kapitein
+    affiliation: Utrecht University
+  
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.14420262
+repository-code: 'https://github.com/UU-cellbiology/UU_SmartMicroscopy'
+keywords:
+  - Smart Microscopy
+  - Automation
+  - Microscopy
+  - Cell biology
+license: MIT
+version: 1.0.0
