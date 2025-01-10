@@ -63,13 +63,14 @@ This repository is structured as follows:
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/UU-cellbiology/FeedbackMicroscopy.git
-   cd FeedbackMicroscopy
+   git clone https://github.com/UU-cellbiology/UU_SmartMicroscopy.git
+   cd UU_SmartMicroscopy
    ```
 
 2. Install dependencies:
    ```bash
-   pip install -r requirements.txt
+   cd _info
+   pip install -r libraries_python3-9-13_231117.txt
    ```
 
 3. Configure your setup:
