@@ -68,11 +68,11 @@ This repository is structured as follows:
    ```
 
 2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+   -  Install libraries described in .\_info. Tested with Python version 3.9.13.
+   -  Installation time expected to be in the order of minutes.
+   
 
-3. Configure your setup:
+4. Configure your setup:
    - Edit the `inputs.yaml` file to match your experiment and hardware.
 
 ---
@@ -111,6 +111,7 @@ Launch the application using:
 ```bash
 python main.py
 ```
+The initialization is expected to be in the order of seconds. If SAM segmentation is used for the first time, then dat awill be downloaded and initialization is expected to be in the order of minutes.
 
 #### **b. Interacting with the GUI**
 The GUI provides an intuitive interface for controlling the experiment. Key features include:
