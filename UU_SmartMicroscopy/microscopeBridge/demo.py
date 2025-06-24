@@ -14,13 +14,13 @@ Version:        1.0
 #endregion
 
 #region libraries
-from microscopeBridge.abstract_bridge import abstract_Bridge
 import numpy as np
 import time
 from skimage import io
 from PIL import Image, ImageTk
-import matplotlib.pyplot as plt
 import tkinter
+from UU_SmartMicroscopy.configs import globVars as gv
+from .abstract_bridge import abstract_Bridge
 #endregion
 
 #endregion 
@@ -60,15 +60,18 @@ class demo(abstract_Bridge):
         self.frame = 0
         self.im_height, self.im_width = self.stack.shape[1], self.stack.shape[2]
         self.mod_height, self.mod_width = self.stack.shape[1], self.stack.shape[2]
-        print('DEMO initialized')
 
         #time series variables
         self.n_time_points = inputs['n_time_points']
         self.time_interval_s = inputs['time_interval_s']
 
         #acquisition variables
-        self.led_power = inputs['led_power']
-        self.led_set = inputs['led_set']
+        try:
+            self.led_power = inputs['led_power']
+            self.led_set = inputs['led_set']
+        except:
+            self.led_power = 0
+            self.led_set = False
         self.running = False
         self.image_ready = False
         self.modulator_ready = False
@@ -76,6 +79,8 @@ class demo(abstract_Bridge):
         #internal queue variables
         self.modulator_dict = {"image":np.zeros((self.im_height,self.im_width)), "power": self.led_power, "set": self.led_set}
         self.Acq_image = np.zeros((self.im_height,self.im_width))
+
+        print('DEMO MICROSCOPE')
 
     def live_image(self):
         #get next image from stack
@@ -159,7 +164,10 @@ class demo(abstract_Bridge):
 
         #wait for timestep
         if self.picNum==self.n_time_points:
+            print('Demo loop finished!')
             pass
+        elif gv.main_event.isSet():
+            self.window.quit()
         else:
             self.window.after(self.time_interval_s*1000, self.AcqLoop)
 #endregion

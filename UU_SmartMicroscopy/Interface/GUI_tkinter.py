@@ -1,21 +1,30 @@
 import tkinter 
-from tkinter import filedialog
-from tkinter.filedialog import asksaveasfile
 import numpy as np
 from PIL import Image, ImageTk
-import configs.functions as functions
-import configs.globVars as gv
-from Interface.abstract_interface import AbstractInterface
+from ..configs import functions
+from ..configs import globVars as gv
+from .abstract_interface import AbstractInterface
 
 class mainWindow(AbstractInterface):
     def __init__(self, parent,inputs,ih,iw):
 
         #calibration from gv
-        calibration = gv.Calibration()
+        if gv.needsCali:
+            calibration = gv.Calibration()
 
         #microscope sizes
         self.iw = iw
         self.ih = ih
+
+        #default values
+        if 'folder_name' not in inputs.keys():
+            inputs['folder_name'] = ''
+        if 'file_name' not in inputs.keys():
+            inputs['file_name'] = ''
+        if 'max_height' not in inputs.keys():
+            inputs['max_height'] = 800
+        if 'dt' not in inputs.keys():
+            inputs['dt'] = 1700
 
         #define inputs variable
         self.inputs = inputs
@@ -50,7 +59,8 @@ class mainWindow(AbstractInterface):
 
         #create buttons, i.e., set & get calibrate button
 
-        self.button_show_path = tkinter.Button(self.frame_controls, width = self.button_width, text="Show Path", command=self.show_path)
+        if gv.hasPath:
+            self.button_show_path = tkinter.Button(self.frame_controls, width = self.button_width, text="Show Path", command=self.show_path)
 
         self.button_show_camera = tkinter.Button(self.frame_controls, bg='yellow', text="Camera", width = self.button_width, command = self.display_switch_camera)
         self.button_show_illumination = tkinter.Button(self.frame_controls, bg='cyan', text="Illumination", width = self.button_width, command = self.display_switch_illumination)        
@@ -58,8 +68,9 @@ class mainWindow(AbstractInterface):
         self.button_show_RGB = tkinter.Button(self.frame_controls, bg='orange', fg='white',text="RGB", width = self.button_width, command = self.display_switch_RGB)
         self.showAsRGB = False
 
-        self.set_calibrate_button = tkinter.Button(self.frame_controls, text="Set Calibration Image",width = self.button_width, command=calibration.set_calibration_image)
-        self.get_calibrate_button = tkinter.Button(self.frame_controls,  text="Get Calibration",width = self.button_width, command=calibration.get_calibration_points)
+        if gv.needsCali:
+            self.set_calibrate_button = tkinter.Button(self.frame_controls, text="Set Calibration Image",width = self.button_width, command=calibration.set_calibration_image)
+            self.get_calibrate_button = tkinter.Button(self.frame_controls,  text="Get Calibration",width = self.button_width, command=calibration.get_calibration_points)
 
         #create button to acquire
         self.acq_button = tkinter.Button(self.frame_controls, text="Acquire", bg='green', fg='white',  width = self.button_width, command=self.acquire)
@@ -67,7 +78,8 @@ class mainWindow(AbstractInterface):
 
         # labels 
         temp_lab_rois = tkinter.Label(self.frame_controls, text="Selections:", justify="left", fg="blue")
-        temp_lab_calib = tkinter.Label(self.frame_controls, text="Calibration:", justify="left",  fg="blue")
+        if gv.needsCali:
+            temp_lab_calib = tkinter.Label(self.frame_controls, text="Calibration:", justify="left",  fg="blue")
         temp_lab_view = tkinter.Label(self.frame_controls, text="Views:", justify="left",  fg="blue")
         temp_lab_runs = tkinter.Label(self.frame_controls, text="Functions:", justify="left",  fg="blue")
 
@@ -79,11 +91,13 @@ class mainWindow(AbstractInterface):
 
         # positioning
         temp_lab_rois.grid                    (row = 0, column = 0, pady = 1, padx = 1)
-        self.button_show_path.grid            (row = 2, column = 0, pady = 1, padx = 1)
+        if gv.hasPath:
+            self.button_show_path.grid            (row = 2, column = 0, pady = 1, padx = 1)
         
-        temp_lab_calib.grid                   (row = 4, column = 0, pady = 5, padx = 1)
-        self.set_calibrate_button.grid        (row = 5, column = 0, pady = 1, padx = 1)
-        self.get_calibrate_button.grid        (row = 6, column = 0, pady = 1, padx = 1)
+        if gv.needsCali:
+            temp_lab_calib.grid                   (row = 4, column = 0, pady = 5, padx = 1)
+            self.set_calibrate_button.grid        (row = 5, column = 0, pady = 1, padx = 1)
+            self.get_calibrate_button.grid        (row = 6, column = 0, pady = 1, padx = 1)
         
         temp_lab_view.grid                    (row = 8, column = 0, pady = 5, padx = 1)
         self.button_show_camera.grid          (row = 9, column = 0, pady = 1, padx = 1)
@@ -201,7 +215,7 @@ class mainWindow(AbstractInterface):
             if self.display_it==0: 
                 self.im=Image.fromarray(self.pixels)
             elif self.display_it==1: 
-                self.im=Image.fromarray(self.mod_pattern)
+                self.im=Image.fromarray(self.mod_pattern>0)
             else: 
                 self.im=Image.fromarray(self.processed_image)
 
@@ -212,6 +226,10 @@ class mainWindow(AbstractInterface):
         self.photo = ImageTk.PhotoImage(self.im)
         self.canvas.itemconfig(self.display_image, image=self.photo)
         self.canvas.after(int(self.inputs['dt']/2), self.refresh)
+
+        #close GUI if measurement ready
+        if gv.main_event.isSet():
+            self.frame.quit()
 
     def double_left(self, event):
         '''

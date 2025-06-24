@@ -1,11 +1,10 @@
 #region Libraries
-import configs.functions as functions                                                                        # Tailored-made functions
 import numpy as np                                                                      # Pytho's backbone - math
-from skimage import measure, filters                                                    # Image analysis library                                                                      # Time measurement
 import csv                                                                              # save data in .csv format
-from Controllers.Direction_controller import Direction_controller
-from models.abstract_model import AbstractModel
 import importlib
+from ..configs import functions                                                                        # Tailored-made functions
+from ..Controllers.Direction_controller import Direction_controller
+from .abstract_model import AbstractModel
 #endregion 
 
 class MigrationCell():
@@ -19,6 +18,9 @@ class MigrationCell():
         self.maskReady = False
 
         self.mask_area = 0
+
+        self.direction = 1
+        self.changedirection = True #another way of collision avoidance
 
         #loop control: variables to change parameters (e.g. LED intensity) after certain loops
         self.smart_loop_parameters = {
@@ -89,7 +91,7 @@ class MigrationCell():
             path = np.ones((n_points,2))
 
             #get an array with 4 elements, each of them containing an array of 2 elements corresponding to the indexes of the vertices of the square
-            vertices = np.tile(center,(4,1)) + np.array([[radius,radius],[-radius,radius],[-radius,-radius],[radius,-radius]])
+            vertices = np.tile(center,(4,1)) + np.array([[radius[0],radius[1]],[-radius[0],radius[1]],[-radius[0],-radius[1]],[radius[0],-radius[1]]])
 
             #iterate the vertices and the side of the square
             for i in range(4):
@@ -115,13 +117,15 @@ class MigrationCell():
             ii = 0
             for i in range(3):
                 for j in range(n):
-                    print(ii)
+                    # print(ii)
                     path[ii,0] = x0+(j*L/n)*np.cos(angles[i])
                     path[ii,1] = y0-(j*L/n)*np.sin(angles[i])
                     ii+=1
                 x0 = x0+(L)*np.cos(angles[i])
                 y0 = y0-(L)*np.sin(angles[i])
-
+            #return array of indexes for the square
+            return path 
+        
         #draw a line path
         elif path_type=='line':
 
@@ -302,6 +306,12 @@ class AutomaticPath(AbstractModel):
 
         self.controller = Direction_controller()
 
+        n=100
+        s = np.arange(3, n, 2)
+        for m in range(3, int(n ** 0.5)+1, 2):
+            if s[(m-3)//2]:
+                s[(m*m-3)//2::m]=0
+        self.primes=np.r_[2, s[s>0]] 
         
         #drop menu GUI list
         self.menu_list = [
@@ -365,6 +375,14 @@ class AutomaticPath(AbstractModel):
         else:
             cells_ready = self.current_cell+1
 
+        #run traffic lights
+        if cells_ready>1:
+            viewCells,collision = self.traffic_light()
+        else:
+            viewCells = np.array(0)
+            collision = []
+
+
         #iterating for every cell
         cell_images = []
         for n_cell in range(cells_ready):
@@ -377,20 +395,10 @@ class AutomaticPath(AbstractModel):
                 if self.cells[n_cell].internal_parameters["pp_id"] is None:
 
                     #set initial "infinite" distance
-                    distance = 999999
                     self.cells[n_cell].internal_parameters["pp_id"] = 1
-
-                    #iterate every point of the path
-                    for i in range(n_points):
-
-                        #calculate (eucledian) distance from centroid of cell to the path
-                        temp = self.cells[n_cell].internal_parameters["path"][i] - self.cells[n_cell].internal_parameters["centroid"] 
-                        temp = np.dot(temp, temp)
-
-                        #get the index of the path point that has the minimum distance from centroid to path and set as pp_id
-                        if temp < distance:
-                            distance = temp
-                            self.cells[n_cell].internal_parameters["pp_id"] = i
+                    diffs = self.cells[n_cell].internal_parameters["path"] - self.cells[n_cell].internal_parameters["centroid"]   # (n_points, 2)
+                    dists = np.sum(diffs ** 2, axis=1)
+                    self.cells[n_cell].internal_parameters["pp_id"] = np.argmin(dists)
 
                     #print current point path id and save 
                     print("[CELL {0}] start id:".format(self.current_cell), self.cells[n_cell].internal_parameters["pp_id"])
@@ -400,7 +408,7 @@ class AutomaticPath(AbstractModel):
                     self.smart_loop(n_cell)
 
                 #get next point in path (circular) and calculate distance to centroid
-                check_id = (self.cells[n_cell].internal_parameters["pp_id"] + 1) % n_points
+                check_id = (self.cells[n_cell].internal_parameters["pp_id"] + 1*self.cells[n_cell].direction) % n_points
                 temp = self.cells[n_cell].internal_parameters["path"][check_id] - self.cells[n_cell].internal_parameters["centroid"] 
                 temp = np.dot(temp, temp)
 
@@ -420,8 +428,18 @@ class AutomaticPath(AbstractModel):
                 #assign the value of the path at index pp_id to the direction
                 self.cells[n_cell].controlled_parameters["direction"] = self.cells[n_cell].internal_parameters["path"][self.cells[n_cell].internal_parameters["pp_id"]]
 
+            #turn around
+            if self.changedirection:
+                returning = False
+                if cells_ready>1:
+                    self.cells[n_cell].direction*= 2*(n_cell not in collision)-1
+                    if n_cell in collision:
+                        print('changed direction cell {0}! direction: {1}'.format(n_cell,self.cells[n_cell].direction))
+            else:
+                returning = (n_cell in collision)
+
             #get new modulator image based on the path and the shape. if path_set is off, the image is empty
-            cell_image = self.controlled_parameters["path_set"]*self.create_directed_pattern(self.controlled_parameters["shape"],n_cell)
+            cell_image = self.controlled_parameters["path_set"]*self.create_directed_pattern(self.controlled_parameters["shape"],n_cell,returning)
 
             #sum mask area in pixels #XXX this is wrong, it should be processed_image_list!
             self.cells[n_cell].mask_area = self.processed_image_list[n_cell].flatten().sum()
@@ -430,31 +448,10 @@ class AutomaticPath(AbstractModel):
             cell_images.append(cell_image)
 
         #get mask in layers XXX
-        processed_images = np.int32(self.processed_image_list[0])!=0
-        for image in self.processed_image_list[1:]:
-            processed_images += np.int32(image)!=0
-        self.processed_image = processed_images*3
-
-        #assign total mod_image
-        self.mod_image = 0
-        for cell in range(len(cell_images)):
-
-            #check traffic light!
-            if len(cell_images)>1:
-                greenLight = self.traffic_light(cell,self.wh*1.5,0.8)
-                if greenLight:
-                    self.mod_image += cell_images[cell]
-                else:
-                    projection = self.cells[cell].internal_parameters["centroid"] - self.cells[cell].controlled_parameters["direction"]
-                    stopCell = self.controlled_parameters["path_set"]*functions.cell_edge(np.int32(self.processed_image_list[cell]),25)*functions.sector_mask(np.int32(self.processed_image_list[cell]).shape,self.cells[cell].internal_parameters["centroid"], projection, 1)*(np.int32(self.processed_image_list[cell])==1)
-                    self.mod_image += stopCell
-            else:
-                self.mod_image += cell_images[cell]
-
-        ##add to processed_image
-        self.processed_image += self.mod_image*7
+        self.mod_image = np.sum(cell_images,0)
+        self.processed_image = np.int32(np.sum(self.processed_image_list,0)*11 + self.mod_image*7 + viewCells*3)
     
-    def create_directed_pattern(self, width, cell_num):
+    def create_directed_pattern(self, width, cell_num,reverse=0):
         '''
             Create a modulator image/pattern based on the position of the center of the cell and the closest point of the path.
             The image is a mask overlapping the area of the cell, the edge of the cell, and the sector of a circle pointing to the defined direction centered at the cell.
@@ -493,9 +490,10 @@ class AutomaticPath(AbstractModel):
         
         #controller step
         self.controller.step(self.processed_image_list[cell_num],
-                             (self.controlled_parameters["id_set"] and  not self.cells[cell_num].maskReady),
+                             (not self.controlled_parameters["id_set"] and  not self.cells[cell_num].maskReady),
                              self.cells[cell_num],
-                             width)
+                             width,
+                             reverse)
         self.cells[cell_num].internal_parameters["L2"] = self.controller.L2
         self.cells[cell_num].internal_parameters["centroid"] = self.controller.centroid
 
@@ -536,7 +534,7 @@ class AutomaticPath(AbstractModel):
         if self.file is None:
             file = []
             for i in range(len(self.cells)):
-                f = '\Acq_{0}_{1}-{2}_cell{3}.csv'.format(str(date),time[11:13],time[14:16],i)
+                f = r'\Acq_{0}_{1}-{2}_cell{3}.csv'.format(str(date),time[11:13],time[14:16],i)
                 file.append(f)
                 #Create header
                 with open(fpath+f, 'a', newline='') as csvfile:
@@ -597,33 +595,42 @@ class AutomaticPath(AbstractModel):
             self.led_power = power[0]
             print('LED power for loop {0} set to {1}'.format(self.cells[n_cell].smart_loop_parameters["loop_number"],power[0]))
 
-    def traffic_light(self,cell_num=1,dist=100, width=1):
+    def traffic_light(self,dist=1.5, width=0.8):
+        dist *=self.wh
 
-        if cell_num<len(self.processed_image_list):
-            #get all masks except of current cell
-            others = 0
-            for i,image in enumerate(self.processed_image_list):
-                if i!=cell_num:
-                    others += np.int32(image)!=0
+        shp = self.processed_image_list[0].shape
 
-            #calculate cone from center of current cell XXX pointing 5 point ahead!
-            if self.cells[cell_num].internal_parameters["pp_id"] is not None:
-                direction = self.cells[cell_num].internal_parameters["path"][(self.cells[cell_num].internal_parameters["pp_id"]+5)%self.cells[cell_num].internal_parameters["path"].shape[0]]
+        view = np.zeros(shp)
+        collision = np.ones(shp)
+
+        #get segmentation, traffic view, and overlap
+        j = 0
+        for i,image in enumerate(self.processed_image_list):
+
+            #look ahead 5 steps
+            if self.cells[i].internal_parameters["pp_id"] is not None:
+                direction = self.cells[i].internal_parameters["path"][(self.cells[i].internal_parameters["pp_id"]+5*self.cells[i].direction)%self.cells[i].internal_parameters["path"].shape[0]]
             else:
-                direction = self.cells[cell_num].internal_parameters["path"][0]
-            projection = direction - self.cells[cell_num].internal_parameters["centroid"]
-            view = functions.view_mask(np.int32(others).shape,self.cells[cell_num].internal_parameters["centroid"], projection, width, dist)
+                direction = self.cells[i].internal_parameters["path"][0]
+            projection = direction - self.cells[i].internal_parameters["centroid"]
+            curr_view = functions.view_mask(shp,self.cells[i].internal_parameters["centroid"], projection, width, dist)
+            view += curr_view
 
-            #add view to processed_image
-            self.processed_image+=view*11
+            #get overlap of cell and view
+            collision *= (image*(self.primes[j]-1)+1)*(curr_view*(self.primes[j+1]-1)+1)
+            j+=2
 
-            #return greenlight
-            if sum((view*others).flatten())>1:
-                # print('collision')
-                return False
-            else:
-                # print('Free')
-                return True
-        else:
-            # print('Lonely cell')
-            return True
+        #get if cell is looking at other. NOTE: we are not considering a triple overlap
+        pdx = np.unique(collision.flatten())
+        # print('pdx',pdx)
+        indexes = []
+        for k in range(len(self.processed_image_list)):
+            tmp = pdx%self.primes[2*k+1]==0
+            # print('tmp',tmp)
+            tmp[pdx==self.primes[2*k+1]]=False
+            tmp[pdx%self.primes[2*k]==0]=False
+            # print('tmp after 2',tmp)
+            indexes.append(np.any(tmp==True))
+        indexes = np.where(indexes)[0]
+        # print(indexes)
+        return view,indexes

@@ -1,1 +1,0 @@
-from segmentation import abstract_detector

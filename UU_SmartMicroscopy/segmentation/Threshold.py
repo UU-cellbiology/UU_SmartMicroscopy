@@ -1,9 +1,9 @@
 """ This module implements threshold segmentation and naive tracking."""
 import warnings
 import numpy as np
-from segmentation.abstract_detector import Abstract_Detector
 import scipy 
 from skimage import filters, feature, measure, segmentation
+from .abstract_detector import Abstract_Detector
 
 class Threshold(Abstract_Detector):
     """

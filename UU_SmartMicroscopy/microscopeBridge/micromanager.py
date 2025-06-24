@@ -14,16 +14,13 @@ Version:        1.0
 #endregion
 
 #region libraries
-from microscopeBridge.abstract_bridge import abstract_Bridge
 from pycromanager import Core
 import numpy as np
-import copy
 import numpy as np
 import time
 from pycromanager import Acquisition, multi_d_acquisition_events
 import datetime
-import tifffile
-import os
+from .abstract_bridge import abstract_Bridge
 #endregion
 
 #endregion 
@@ -64,6 +61,11 @@ class micromanager(abstract_Bridge):
         self.mod_height, self.mod_width = self.core.get_slm_height(self.Modulator), self.core.get_slm_width(self.Modulator)
         self.im_height, self.im_width = self.core.get_image_height(), self.core.get_image_width()
 
+        #get micromanager microscope type:
+        self.microscope = inputs['scope_type']
+        if self.microscope not in ['PEX','OPTO']:
+            self.microscope = 'PEX'
+
         #print Modulator type
         print('Modulator initialized, model: {}'.format(self.core.get_device_type(self.Modulator)))
 
@@ -75,18 +77,14 @@ class micromanager(abstract_Bridge):
             channel_lab_text += '"{}",'.format(channels[0])
 
         #create acquisition settings string
-        acq_settings = r'"num_time_points":{0},"time_interval_s":{1},"channel_group": "Channel","channels":[{2}],"channel_exposures_ms":[{3}]'.format(inputs['n_time_points'],
-                                                                                                                                                    inputs['time_interval_s'],
-                                                                                                                                                    channel_lab_text[:-1],
-                                                                                                                                                    channel_exp_text[:-1])
-        self.acq_args = '{'+acq_settings+'}'
-        self.acq_args = eval(self.acq_args)
+        self.mm_create_MDA(inputs['n_time_points'],inputs['time_interval_s'],channel_lab_text[:-1],channel_exp_text[:-1])
 
         #get path and name to save data
         self.acq_path = inputs['folder_name']
         self.acq_name = inputs['file_name']
         self.channels = inputs['channels']
         self.waiting_multichannel = inputs['waiting_multichannel']
+        self.mm_power = 0
 
         #counter in case of multi-channel
         self.channelIdx=0
@@ -107,6 +105,9 @@ class micromanager(abstract_Bridge):
         #filter wheel parameters
         self.prev_channel = self.mm_get_channel()
 
+        #initialization
+        self.mm_init()
+
     def live_image(self):
         self.core.snap_image()
         tagged_image = self.core.get_tagged_image()
@@ -115,13 +116,16 @@ class micromanager(abstract_Bridge):
     def shutdown(self):
         self.mm_led(False)
         self.core.set_slm_image(self.Modulator,np.zeros((self.mod_height,self.mod_width)).astype("uint8").flatten())
+        self.core.display_slm_image(self.Modulator)
 
     def set_modulation(self,mask=''):
         if type(mask)==type(''):
             self.core.set_slm_image(self.Modulator,self.modulator_dict["image"])
+            self.core.display_slm_image(self.Modulator)
         else:
             mask = mask.flatten()
             self.core.set_slm_image(self.Modulator,mask)
+            self.core.display_slm_image(self.Modulator)
 
     def run_acquisition(self):
         '''
@@ -181,7 +185,7 @@ class micromanager(abstract_Bridge):
             self.modulator_ready = False
 
             #set LED power - even if it is off. 
-            self.mm_power(self.modulator_dict['power'])
+            self.mm_set_power(self.modulator_dict['power'])
             
             #change global variable for post_hook of Modulator
             self.led_set = self.modulator_dict['set']
@@ -253,7 +257,7 @@ class micromanager(abstract_Bridge):
         if power is not None:
             print("change power")
             time.sleep(0.1)
-            self.mm_power(power)
+            self.mm_set_power(power)
             time.sleep(0.5)
 
     def set_channel(self,channel='1-Transmission',previous=False):
@@ -287,26 +291,65 @@ class micromanager(abstract_Bridge):
         '''
         The functions mm_ depend on the configuration file and hardware used in the micromanager software. 
         '''
-        self.core.set_config("Channel", channel)
+        if self.microscope=='PEX':
+            self.core.set_config("Channel", channel)
+        elif self.microscope=='OPTO':
+            self.core.set_config("2-Channel", channel)
 
-    def mm_power(self,val):
+    def mm_set_power(self,val):
         '''
         The functions mm_ depend on the configuration file and hardware used in the micromanager software. 
         '''
-        self.core.set_property("Mightex_BLS(USB)", "normal_CurrentSet", val)
+        if self.microscope=='PEX':
+            self.core.set_property("Mightex_BLS(USB)", "normal_CurrentSet", val)
+        elif self.microscope=='OPTO':
+            self.core.set_property("pE-800", "IntensityC", val)            
+        self.mm_power = val
 
     def mm_led(self,set):
         '''
         The functions mm_ depend on the configuration file and hardware used in the micromanager software. 
         '''
-        if set:
-            self.core.set_config("LED", "Blue ON")
-        else:
-            self.core.set_config("LED", "Blue OFF")
-
+        if self.microscope=='PEX':
+            if set:
+                self.core.set_config("LED", "Blue ON")
+            else:
+                self.core.set_config("LED", "Blue OFF")
+        elif self.microscope=='OPTO':
+            if set:
+                self.core.set_property("pE-800", "IntensityC", self.mm_power)   
+            else:
+                self.core.set_property("pE-800", "IntensityC", 0)   
+            
     def mm_get_channel(self):
         '''
         The functions mm_ depend on the configuration file and hardware used in the micromanager software. 
         '''
-        self.core.get_property("TIFilterBlock1","Label")
+        if self.microscope=='PEX':
+            channel = self.core.get_property("TIFilterBlock1","Label")
+        elif self.microscope=='OPTO':
+            channel = self.core.get_current_config("2-Channel")
+        return channel
+            
+    def mm_create_MDA(self,points,interv,chan,exp):
+        '''
+        The functions mm_ depend on the configuration file and hardware used in the micromanager software. 
+        '''
+        if self.microscope=='PEX':
+            acq_settings = r'"num_time_points":{0},"time_interval_s":{1},"channel_group": "Channel","channels":[{2}],"channel_exposures_ms":[{3}]'.format(points,interv,chan,exp)
+        elif self.microscope=='OPTO':
+            acq_settings = r'"num_time_points":{0},"time_interval_s":{1},"channel_group": "2-Channel","channels":[{2}],"channel_exposures_ms":[{3}]'.format(points,interv,chan,exp)
+ 
+        self.acq_args = '{'+acq_settings+'}'
+        self.acq_args = eval(self.acq_args)
+
+    def mm_init(self):
+        if self.microscope=='PEX':
+            pass
+        elif self.microscope=='OPTO':
+            #Activate grayVariable
+            pass
+            self.core.set_property("Mosaic3", "PixelMode", '256Grays')
+
+
 #endregion

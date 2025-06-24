@@ -20,16 +20,16 @@ import time                                                                     
 import datetime                                                                         # Time (and date) measurements
 import threading                                                                        # Paralelize process
 from skimage import filters, feature, transform                                         # Image analysis library
-import configs.functions as functions                                                                        # Tailored-made functions
 import os                                                                               # System handling
 from pathlib import Path                                                                # Get and manage directories object-oriented
 import importlib                                                                        # Necessary to initialize classes andmodels from strings 
 import json                                                                             # Nice formatting for files like metadata and calibration
-import models                                                                           # Package/folde that keeps all the Models as separate classes in separate files 
-import configs.globVars as gv                                                           #shared variables with other modules
 import tifffile
-from Interface.GUI_tkinter import mainWindow
 import yaml
+import UU_SmartMicroscopy.configs.functions as functions                                # Tailored-made functions
+from UU_SmartMicroscopy.Interface.GUI_tkinter import mainWindow
+import UU_SmartMicroscopy.models                                                        # Package/folde that keeps all the Models as separate classes in separate files 
+import UU_SmartMicroscopy.configs.globVars as gv                                                           #shared variables with other modules
 #endregion
 #endregion
 
@@ -73,6 +73,12 @@ if inputs['microscope']=='demo' and inputs['demo_path']=='':
     else:
         inputs['demo_path'] = './_info/demo_data/Migration_HT1080_mCherry_100ms.tif'
 
+#Move microscope type of micromanager as another input
+if 'micromanager' in inputs['microscope']:
+    inputs['scope_type'] = inputs['microscope'].split('_')[-1]
+    inputs['functionalities']['scope_type'] = inputs['scope_type']
+    inputs['microscope'] = 'micromanager'
+
 #create metadata file name NOTE: the metadata will only be saved in a succesful run!
 nameFile_metadata = '_{0}_{1}-{2}'.format(str(datetime.date.today()),time.ctime()[11:13],time.ctime()[14:16])
 #endregion
@@ -98,6 +104,8 @@ model = class_(Microscope.im_height, Microscope.im_width, functionalities = inpu
 gv.microscopeInfo = [Microscope.im_width,Microscope.im_height,Microscope.mod_height,Microscope.mod_width]
 gv.inputs = inputs
 gv.menuList = model.menu_list
+gv.needsCali = True
+inputs['run'] = False
 #endregion
 
 #region Folder and Hash
@@ -111,10 +119,14 @@ if not os.path.exists(inputs['folder_name']):
 
 #get Git hash and store it in inputs dictonary
 #NOTE: this will only work if the code is used from the git folder!
-git_folder = os.getcwd()+'\.git\\'
-head_name = Path(git_folder, 'HEAD').read_text().split('\n')[0].split(' ')[-1]
-head_ref = Path(git_folder,head_name)
-inputs['git'] = head_ref.read_text().replace('\n','')
+try:
+    git_folder = os.getcwd()+r'\.git\\'
+    head_name = Path(git_folder, 'HEAD').read_text().split('\n')[0].split(' ')[-1]
+    head_ref = Path(git_folder,head_name)
+    inputs['git'] = head_ref.read_text().replace('\n','')
+except:
+    inputs['git'] = ''
+
 #endregion
 #endregion
 
@@ -200,6 +212,9 @@ class ModelThread(threading.Thread):
 
                 #get image
                 self.cam_image = gv.image_control_queue.get()
+
+                if  gv.cal_event.is_set():
+                    gv.image_control_queue.put(self.cam_image)
 
                 #process image using processing function from feedback_model to segment cell
                 self.model.process_step(self.cam_image)
@@ -340,8 +355,10 @@ class ControlThread(threading.Thread):
         while Microscope.running:
             time.sleep(0.5)
 
-        # clear event object
+        # clear event object and set main event
+        inputs['run'] = True
         gv.acq_event.clear()
+        gv.main_event.set()
 
 #endregion 
     
@@ -374,6 +391,7 @@ threading._shutdown()
 Microscope.shutdown()
 
 #Save metadata as json file
-with open(inputs['folder_name']+'/'+inputs['file_name']+nameFile_metadata+'_metadata.json', 'w') as f:
-        json.dump(inputs, f)
+if inputs['run']:
+    with open(inputs['folder_name']+'/'+inputs['file_name']+nameFile_metadata+'_metadata.json', 'w') as f:
+            json.dump(inputs, f)
 #endregion

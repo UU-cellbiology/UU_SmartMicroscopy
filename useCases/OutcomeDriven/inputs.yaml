@@ -1,51 +1,58 @@
 ---
 general_inputs:
     #save settings (file name, path, calibration path for magnification calibration)
-    file_name                       : 'test_run_01'
-    folder_name                     : 'C:\Users\Rates001\Downloads'
+    file_name                       : 'run02_4cells'
+    folder_name                     : 'E:\Josiah\2025-05-16_HT1080-TIAM_Cy5_multiCell_pingpong'
 
     #model for feedback experiment
     # choose between 'AutomaticPath' for migration experiment | 'PID_LEXY_SAM' for concentration experiments
     model                           : 'AutomaticPath'
 
     #Microscope in use
-    # choose from the following options | 'micromanager' | 'demo'
-    microscope                      : 'demo'
+   # choose from the following options | 'micromanager_PEX' | 'micromanager_OPTO' | 'demo'
+    microscope                      : 'micromanager_PEX'
 
     #number of measurement points and their time interval in seconds
-    n_time_points                   : 240
-    time_interval_s                 : 15
+    n_time_points                   : 1440
+    time_interval_s                 : 60
 
     #acquisition settings: list of tuples with name of channel and exposure time, fluorescence setting, and attenuation for optogenetic signal
-    coolLED                         : 15
-    attenuation                     : 1.4
+    coolLED                         : 10
+    attenuation                     : 0
     channels                        : 
-    - ['4-mCherry',100]
+    - ['5-QDOT',100]
 
     #size of the cell in pixel [width, height] for segmentation
-    cell_size                       : [200,200]
+    cell_size                       : [400,400]
 
 functionalities_PID_LEXY_SAM: 
     #size of the nucleus in pixel [width, height] for box ONLY for LEXY
-    nucleus_size                    : [300,300]
+    nucleus_size                    : [200,200]
 
     #setpoint_array is for concentration experiments. It is a list of tuples, each tuple has the format (time,setpoint), to assign a new controller setpoint at a certain time (in seconds).
     setpoint_array                  : 
     - [0,0.5]
-    - [900,0.3]
-    - [1800,0.4]
-    - [2700,0.2]
+    - [600,0.8]
+    - [1200,0.2]
+    - [1800,0.5]
+    - [2400,0.8]
+    - [3000,0.2]
+    - [3600,0.5]
+    - [4200,0.8]
+    - [4800,0.2]
+    - [5400,0.5]
+    - [6000,0.8]
+    - [6600,0.2]
 
     # LEXY controlled parameter (One of: ["nucleus_intensity", "cytosol_intensity", "ratio"], corresponding to nucleus, cytosol and nucleus-cytosol ratio control )
-    LEXY_control_parameter          : 'normalized_cytosol_intensity'
-
+    LEXY_control_parameter          : 
+    - 'nucleus_intensity'
     # Minimum and maximum intensity of controlled variable (nucleus, cytosol, ration), used for normalization
     LEXY_normalization_parameters   : 
-    - 43
-    - 110
+    - [50,452]
 
     # Use gain scheduling or anti-windup in LEXY PID controller
-    use_gainscheduling              : False
+    use_gainscheduling              : True
     use_antiwindup                  : False
 
     #PID_coef is a list with 3 floats, representing the P,I, and D coefficients for the LEXY controller
@@ -58,15 +65,28 @@ functionalities_AutomaticPath:
     #power_array is for migration experiments. It is a list of lists, each inner list has the format (loop,step,power), to assign a new led power at a certain loop and step on that loop.
     power_array                     : 
     - [0,0,1]
-    - [1,0,2]
 
     #type of path to draw. Choose between circle | square | triangle | vline | hline
     path_type                       : 
-    - 'circle'
+    - 'square'
+    - 'square'
+    - 'square'
+    - 'square'
+    # - 'square'
+    # - 'square'
+
 
     #path_pos has the structure [(x,y), r, n] with x,y center of path, r size of path (for circle and square), and n number of points
     path_pos                        : 
-    - [[800, 800], 350, 40]
+    - [[1150, 1000], [450,750], 100]
+    - [[1150, 1000], [450,750], 100]
+    - [[1150, 1000], [450,750], 100]
+    - [[1150, 1000], [450,750], 100]
+    # - [[1150, 1000], [450,750], 100]
+    # - [[1000, 1150], 450, 40]
+    # - [[1000, 1150], 450, 40]
+    # - [[1000, 1150], 450, 40]
+
 
 advanced_inputs:
     #max_height and offset: (int) set image display size
@@ -81,9 +101,9 @@ advanced_inputs:
 
     #cali_coordinates: (list of tuples with pair of ints) coordinates of the 3 spots used for calibration. If you want to use coordinate from file, set this as None.
     cali_coordinates                : 
-    - [250,300]
-    - [350,200]
-    - [360,300]
+    - [250,350]
+    - [350,250]
+    - [360,350]
 
     #calibration file name
     cal_file_path                   : 'cal_file_60.txt'
@@ -92,5 +112,5 @@ advanced_inputs:
     demo_path                       : ''
 
     #segmentation algorithm. Choose between SAM | Threshold
-    segmentation                       : 'Threshold'
+    segmentation                       : 'SAM'
 ...

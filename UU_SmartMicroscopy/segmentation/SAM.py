@@ -6,12 +6,11 @@ import numpy as np
 import torch
 from torch import Tensor
 from segment_anything import sam_model_registry, SamAutomaticMaskGenerator, SamPredictor
-from segmentation.abstract_detector import Abstract_Detector
 import urllib
 import os
 from PIL import Image
 from torch.nn import functional as F
-
+from .abstract_detector import Abstract_Detector
     
 class SAM(Abstract_Detector):
     """Implementation of SAM segmentation.
@@ -214,7 +213,7 @@ class SAM(Abstract_Detector):
 
 
 if __name__ == "__main__":
-    sam  = segmenter_SAM()
+    sam  = SAM()
     test_input = np.float32(np.random.rand(3, 612, 512))
     sam.setImage(test_input)
     

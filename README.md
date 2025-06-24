@@ -1,111 +1,142 @@
-### README for the Smart Microscopy Repository
+# **Modular Platform for Smart Microscopy**
 
----
-
-# **Modular platform for Smart Microscopy**
-
-Welcome to the **UU Smart Microscopy** repository! This Python-based project is designed to automate and enhance the capabilities of microscopes, specifically for smart microscopy experiments with on-the-fly acquisition modifications.
+Welcome to the **UU Smart Microscopy** repository! This Python-based project is designed to automate and enhance microscope capabilities for smart microscopy experiments, featuring real-time feedback control and modular extensibility.
 
 ---
 
 ## **Overview**
 
-This repository contains the codebase for controlling microscopes based on Python.
+This repository provides a **library** for controlling microscopes, along with **use-case examples** demonstrating its functionality. The new structure separates core functionality from application-specific implementations, making it easier to integrate and extend.
 
 ### Key Features:
-- **GUI Integration**: A user-friendly graphical interface built with Tkinter.
-- **Real-time Feedback Control**: Implements PID control and custom algorithms for precision adjustments.
-- **Modular Design**: Easily extendable architecture for custom models and hardware setups.
-- **Simulated Demo Mode**: A preloaded demo dataset for simulation and testing.
+- **Library Structure**: Installable via `pip` for easy integration into other projects.
+- **GUI Integration**: User-friendly graphical interface built with Tkinter.
+- **Real-time Feedback Control**: Supports PID control and custom algorithms.
+- **Modular Design**: Easily extendable for custom models and hardware.
+- **Demo Mode**: Preloaded datasets for testing and simulation.
+- **Multi-Cell Models**: Expanded functionality for handling multiple cells for both nucleus concentration and cell migration.
 
 ---
 
-## **Contents**
+## **Repository Structure**
 
-This repository is structured as follows:
+The repository is organized as follows:
 
-1. **Main Files**
-   - `main.py`: Core script to initialize and control the microscope via a GUI.
-   - `inputs.yaml`: Configuration file for general and advanced settings.
+```
+UU_smart_microscopy/    # Core library (pip-installable)
+│
+├── setup.py            # Installation script (includes dependencies)
+├── usecases/           # Example applications
+│   ├── OutcomeDriven/  # Original main.py logic (renamed)
+│   └── Minimal/        # Simplified demo use case
+│
+├── info/               # Dependencies details and demo data
+│
+├── microscopeBridge/   # Microscope interfaces
+│   ├── micromanager.py
+│   └── demo.py
+│
+├── models/             # Smart microscopy models
+│   ├── AutomaticPath.py
+│   ├── PID_LEXY_SAM.py
+│   └── demo.py
+│
+├── Interface/          # User interface
+│   └── GUI_tkinter.py
+│
+├── segmentation/       # Segmentation methods
+│   ├── SAM.py
+│   └── Threshold.py
+│
+├── Controllers/        # Controller methods
+│   ├── PID_controller.py
+│   └── Direction_controller.py
+│
+└── configs/            # Utilities and configurations
+    ├── functions.py
+    └── globVars.py
+```
 
-2. **Microscope Bridges**
-   - `microscopeBridge/micromanager.py`: Integration with the Micro-Manager software.
-   - `microscopeBridge/demo.py`: Demo mode using simulated image stacks.
-
-3. **Models**
-   - `models/PID_controller.py`: Implements a PID controller for fluorescence experiments.
-   - `models/Direction_controller.py`: Manages directional illumination control for cell migration.
-
-4. **Interfaces**
-   - `Interface/GUI_tkinter.py`: Interactive graphical interface for running experiments and controlling settings.
-
-5. **Segmentation**
-   - `segmentation/SAM.py`: ...
-   - - `segmentation/Threshold.py`: ...
-
-6. **Configurations**
-   - `configs/functions.py`: Utility functions for image processing and calculations.
-   - `configs/globVars.py`: Global variables for inter-thread communication and shared resources.
 ---
 
 ## **Getting Started**
 
 ### Prerequisites
-- **Python 3.9.13**
-- Required Libraries:
-  - `numpy`
-  - `tkinter`
-  - `scikit-image`
-  - `pycromanager` (for integration with Micro-Manager)
-  - `tifffile`
+- **Python 3.9+** (Tested with 3.9.13)
+- Dependencies are automatically installed via `setup.py`
 
 ### Installation
 
-1. Clone this repository:
+1. Clone the repository:
    ```bash
    git clone https://github.com/UU-cellbiology/UU_SmartMicroscopy.git
    cd UU_SmartMicroscopy
    ```
 
-2. Install dependencies:
-   -  Install libraries described in .\_info. Tested with Python version 3.9.13.
-   -  Installation time expected to be in the order of minutes.
-   
+2. Install the library:
+   ```bash
+   pip install .  # or "pip install setup.py"
+   ```
 
-4. Configure your setup:
-   - Edit the `inputs.yaml` file to match your experiment and hardware.
+3. [optional] Move to the demo use-case folder
+   ```bash
+   cd useCases/Minimal
+   ```
 
 ---
 
 ## **Usage**
 
-### **1. Setting Up the Configuration**
+### **1. Running Use Cases**
+Two example applications are provided in `usecases/`:
 
-Before running the program, ensure that the `inputs.yaml` file is properly configured to suit your experimental needs. Below are some of the key parameters and their descriptions:
+#### **Minimal Demo**
+```bash
+python usecases/Minimal/Minimal.py
+```
+- Quick-start test of basic functionality
+- Uses simulated data
+- No GPU needed, runs in standard desktop computer
 
-#### **General Inputs**
-- `file_name`: The name for the output file where data will be saved.
-- `folder_name`: The directory where data will be stored.
-- `model`: Specify the experiment model (e.g., `'AutomaticPath'` for migration or `'PID_LEXY_SAM'` for fluorescence control).
-- `microscope`: Specify the microscope interface (`'micromanager'` for live hardware or `'demo'` for simulation).
-- `n_time_points`: The number of time points to acquire.
-- `time_interval_s`: The time interval (in seconds) between acquisitions.
-- `channels`: Define fluorescence channels and their respective exposure times.
-
-#### **Functionalities**
-Each model supports specific functionalities:
-- **AutomaticPath**:
-  - `path_type`: Shape of the illumination path (`circle`, `square`, etc.).
-  - `path_pos`: Position, size, and number of points for the illumination path.
-- **PID_LEXY_SAM**:
-  - `PID_coef`: PID coefficients for feedback control (Proportional, Integral, Derivative).
-  - `LEXY_control_parameter`: Control parameter (`'nucleus_intensity'`, `'cytosol_intensity'`, etc.).
-  - `LEXY_normalization_parameters`: Minimum and maximum intensity for normalization.
+#### **Outcome-Driven Experiment (Original Main)**
+```bash
+python usecases/OutcomeDriven/OutcomeDriven.py
+```
+- Full-featured version with GUI
+- Configure via `inputs.yaml` (see below)
 
 ---
 
-### **2. Running the Program**
+### **2. Configuration (inputs.yaml)**
+For the outcome-driven use case, configure `inputs.yaml` with:
 
+#### **General Settings**
+```yaml
+file_name: "experiment_data"
+folder_name: "results"
+model: "PID_LEXY_SAM"  # or "AutomaticPath"
+microscope: "demo"     # or "micromanager"
+n_time_points: 100
+time_interval_s: 5
+```
+
+#### **Model-Specific Parameters**
+- **PID_LEXY_SAM**:
+  ```yaml
+  PID_coef: [0.5, 0.1, 0.01]
+  LEXY_control_parameter: "nucleus_intensity"
+  LEXY_normalization_parameters: [min, max]
+  ```
+  
+- **AutomaticPath**:
+  ```yaml
+  path_type: "circle"
+  path_pos: [[500, 500], 100, 20]  # [center, radius, points]
+  ```
+
+---
+
+### **3. Running the Program**
 #### **a. Starting the GUI**
 Launch the application using:
 ```bash
@@ -124,76 +155,35 @@ The GUI provides an intuitive interface for controlling the experiment. Key feat
 
 ---
 
-### **3. Modes of Operation**
+## **Extending the Platform**
 
-#### **a. Demo Mode**
-This mode simulates microscope functionality using a preloaded image stack.
-1. Set `microscope` to `'demo'` in `inputs.yaml`.
-2. Specify the path to the demo data stack in `demo_path`.
-3. Run the program to simulate a complete experiment workflow.
-
-#### **b. Real Microscope Mode**
-This mode interacts directly with a microscope controlled via Micro-Manager.
-1. Ensure that Micro-Manager is installed and configured with your microscope.
-2. Set `microscope` to `'micromanager'` in `inputs.yaml`.
-3. Run the program to control the microscope hardware.
-
----
-
-### **4. Extending the Codebase**
-
-#### **Adding New Models**
-To create a new model:
-1. Create a new Python file in the `models` directory.
-2. Implement a class inheriting from the base feedback model.
-3. Define the necessary methods for image processing, control logic, and data export.
-
-#### **Integrating New Microscopes**
-To support a new microscope system:
-1. Implement a new class inheriting from `abstract_bridge` in the `microscopeBridge` directory.
-2. Define methods for live image acquisition, modulator control, and shutdown.
-
----
-
-### **5. Example Workflow**
-Below is an example workflow using the **AutomaticPath** model:
-
-1. Configure `inputs.yaml`:
-   ```yaml
-   microscope: 'micromanager'
-   model: 'AutomaticPath'
-   path_type: 'circle'
-   path_pos: [[500, 500], 100, 20]
-   n_time_points: 100
-   time_interval_s: 5
-   channels:
-     - ['GFP', 50]
+### **Creating New Use Cases**
+1. Make a new directory in `usecases/`
+2. Import required modules:
+   ```python
+   from smart_microscopy import models, microscopeBridge
    ```
-2. Run the program:
-   ```bash
-   python main.py
-   ```
-3. Use the GUI to:
-   - Start the experiment.
-   - Visualize illumination patterns and segmented cells in real time.
-   - Save data automatically to the specified folder.
+3. Implement your experiment logic
+
+### **Adding Models/Microscopes**
+Follow the existing patterns in:
+- `models/` for new control algorithms
+- `microscopeBridge/` for new hardware interfaces
 
 ---
 
 ## **Contributing**
 
-Contributions are welcome! Please follow the guidelines below:
-
-1. Fork the repository.
-2. Create a feature branch (`git checkout -b feature-name`).
-3. Commit your changes (`git commit -m "Add feature"`).
-4. Push to the branch (`git push origin feature-name`).
-5. Submit a Pull Request.
+We welcome contributions! Please:
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature-name`)
+3. Commit changes (`git commit -m "Description"`)
+4. Push to the branch (`git push origin feature-name`)
+5. Open a Pull Request
 
 ---
 
-## **Authors and Contact**
-
+## **Authors & Contact**
 - **Alfredo Rates**, **Josiah Passmore**, **Ihor Smal**, **Menno van Laarhoven**, **Jakob Schröder**
 - Contact: [a.ratessoriano@uu.nl](mailto:a.ratessoriano@uu.nl)
 

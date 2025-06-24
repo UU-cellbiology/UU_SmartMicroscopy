@@ -1,12 +1,12 @@
 import numpy as np
-from Controllers.abstract_controller import AbstractController
+from .abstract_controller import AbstractController
 
 class PIDController(AbstractController):
     """
     Represents a PID controller object, written in such a way that it can be readily adapted to any target system.
 
     """
-    def __init__(self, K=[4.0,0.006,0.2], T=15, lb=-0.1, ub=20, dynamic_gains=None, antiwindup=False, parity = 1):
+    def __init__(self, K=[4.0,0.006,0.2], T=15, lb=-0.1, ub=1e5, dynamic_gains=None, antiwindup=False, parity = 1):
 
         self.previous_error = 0.0           # Error computed in previous time-step. Used for derivative computation
         self.previous_control = 0.0         # Control signal used in previous time-step. Used for back-calculation (anti-windup)
@@ -46,10 +46,13 @@ class PIDController(AbstractController):
         self.enable_gain_scheduling = True
 
         if dynamic_gains is None:
+            impr=0.75
+            areaCorr = 1
+            
             # Enable gain scheduling with default parameters
-            self.dynamic_Kp = np.array([180/2, 90/2, 9, 5, 3])
-            self.dynamic_Ki = np.array([1/2, 0.5/2, 0.05, 0.04, 0.02])
-            self.dynamic_Kd = np.array([6/2, 3/2, 0.3, 0.2, 0.2])
+            self.dynamic_Kp = np.array([30,30,20*impr,20*impr,5*impr])*areaCorr
+            self.dynamic_Ki = np.array([0.2,0.1,0.05,0.03,0.01])*areaCorr
+            self.dynamic_Kd = np.array([0.001, 0.001, 0.001, 0.001, 0.001])*areaCorr
             self.operating_points = np.array([0.0, 0.25, 0.5, 0.75, 1.0])
  
 
@@ -115,5 +118,4 @@ class PIDController(AbstractController):
             Kp = np.interp(scheduling_variable, self.operating_points, self.dynamic_Kp)
             Ki = np.interp(scheduling_variable, self.operating_points, self.dynamic_Ki)
             Kd = np.interp(scheduling_variable, self.operating_points, self.dynamic_Kd)
-            print('Kp: ',Kp)
             return Kp, Ki, Kd, Ki / Kp

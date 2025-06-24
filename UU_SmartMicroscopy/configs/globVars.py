@@ -2,10 +2,12 @@
 import queue
 import threading
 import numpy as np
+import math
+from itertools import permutations
 import json
 from skimage import filters, feature, transform 
-import configs.functions as functions
 import scipy
+from . import functions
 #endregion
 
 #region queues
@@ -61,6 +63,7 @@ modelPath = []
 microscopeInfo = []
 inputs = []
 menuList = []
+needsCali = False
 #endregion
 
 #region calibration
@@ -201,8 +204,7 @@ class Calibration():
 
             #assign and re-arrange calibration for camera and modulator
             self.cam_points = temp_points
-            self.cam_points = self.cam_points[np.argsort(self.cam_points[:,0])]
-            self.slm_points = self.slm_points[np.argsort(self.slm_points[:,0])]
+            self.order_points()
 
             #estimate the image transformation needed to relate from modulator to camera and back
             self.t_slmtocam = np.linalg.inv(transform.estimate_transform("affine", self.slm_points,self.cam_points).params)
@@ -267,4 +269,28 @@ class Calibration():
 
         #return image
         return slm_pixels
+    
+    def order_points(self):
+        trans = self.cam_points
+        orig = self.slm_points
+        angles_origin = [[],[]]
+        for perm in permutations(orig):
+            ang = math.degrees(math.atan2(perm[2][1]-perm[1][1], perm[2][0]-perm[1][0]) - math.atan2(perm[0][1]-perm[1][1], perm[0][0]-perm[1][0]))
+            if ang < 0:
+                ang +=360
+            if ang<180:
+                angles_origin[0].append(perm[1])
+                angles_origin[1].append(ang)
+
+        angles_trans = [[],[]]
+        for perm in permutations(trans):
+            ang = math.degrees(math.atan2(perm[2][1]-perm[1][1], perm[2][0]-perm[1][0]) - math.atan2(perm[0][1]-perm[1][1], perm[0][0]-perm[1][0]))
+            if ang < 0:
+                ang +=360
+            if ang<180:
+                angles_trans[0].append(perm[1])
+                angles_trans[1].append(ang)
+
+        self.slm_points = np.array(angles_origin[0])[np.argsort(angles_origin[1])]
+        self.cam_points = np.array(angles_trans[0])[np.argsort(angles_trans[1])]
 #endregion
