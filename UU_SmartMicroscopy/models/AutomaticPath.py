@@ -20,7 +20,6 @@ class MigrationCell():
         self.mask_area = 0
 
         self.direction = 1
-        self.changedirection = True #another way of collision avoidance
 
         #loop control: variables to change parameters (e.g. LED intensity) after certain loops
         self.smart_loop_parameters = {
@@ -240,8 +239,9 @@ class AutomaticPath(AbstractModel):
         self.file = None
 
         #get segmentation class
-        models_module = importlib.import_module('segmentation.{}'.format(functionalities['segmentation']))
+        models_module = importlib.import_module('UU_SmartMicroscopy.segmentation.{}'.format(functionalities['segmentation']))
         class_ = getattr(models_module, functionalities['segmentation'])
+        # from ..segmentation import Threshold as class_
         self.model = class_()
 
         #Assign valaues from functionalities. Assign default of no input
@@ -303,6 +303,8 @@ class AutomaticPath(AbstractModel):
 
         #array of boxes for SAM
         self.setup_array = []
+
+        self.changedirection = True #another way of collision avoidance
 
         self.controller = Direction_controller()
 

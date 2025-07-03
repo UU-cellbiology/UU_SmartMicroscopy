@@ -28,7 +28,7 @@ import tifffile
 import yaml
 import UU_SmartMicroscopy.configs.functions as functions                                # Tailored-made functions
 from UU_SmartMicroscopy.Interface.GUI_tkinter import mainWindow
-import UU_SmartMicroscopy.models                                                        # Package/folde that keeps all the Models as separate classes in separate files 
+import UU_SmartMicroscopy.models as models                                                        # Package/folde that keeps all the Models as separate classes in separate files 
 import UU_SmartMicroscopy.configs.globVars as gv                                                           #shared variables with other modules
 #endregion
 #endregion
@@ -69,9 +69,9 @@ inputs['dt'] = 1700
 #get demo file streaming if needed
 if inputs['microscope']=='demo' and inputs['demo_path']=='':
     if inputs['model']=='PID_LEXY_SAM':
-        inputs['demo_path'] = './_info/demo_data/LEXY_U2OS_mCherry_100ms.tif'
+        inputs['demo_path'] = '../../info/demo_data/LEXY_U2OS_mCherry_100ms.tif'
     else:
-        inputs['demo_path'] = './_info/demo_data/Migration_HT1080_mCherry_100ms.tif'
+        inputs['demo_path'] = '../../info/demo_data/Migration_HT1080_mCherry_100ms.tif'
 
 #Move microscope type of micromanager as another input
 if 'micromanager' in inputs['microscope']:
@@ -90,13 +90,13 @@ Available: PEX, AiryScan2, demo
 '''
 
 #define Microscope object
-microscope_module = importlib.import_module('microscopeBridge.{}'.format(inputs['microscope']))
+microscope_module = importlib.import_module('UU_SmartMicroscopy.microscopeBridge.{}'.format(inputs['microscope']))
 class_ = getattr(microscope_module, inputs['microscope'])
 Microscope = class_(inputs)
 
 #get model object from text extracted from pop-up window
 #The third element called functionalities is a dictionary with possible additional functions. Mandatory for modularity. 
-models_module = importlib.import_module('models.{}'.format(inputs['model']))
+models_module = importlib.import_module('UU_SmartMicroscopy.models.{}'.format(inputs['model']))
 class_ = getattr(models_module, inputs['model'])
 model = class_(Microscope.im_height, Microscope.im_width, functionalities = inputs["functionalities"])
 

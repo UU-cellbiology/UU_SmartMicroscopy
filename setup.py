@@ -26,7 +26,6 @@ setup(
                     'tk',
                     'scikit-image',
                     'pathlib',
-                    'importlib',
                     'PyYAML',
                     'pycromanager',
                     'matplotlib',

@@ -6,7 +6,7 @@ import csv
 import importlib
 import copy
 from skimage.measure import regionprops,moments
-import configs.globVars as gv
+from ..configs import globVars as gv
 from ..configs import functions
 from ..Controllers.PID_controller import PIDController
 from .abstract_model import AbstractModel
